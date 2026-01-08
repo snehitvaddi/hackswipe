@@ -1,6 +1,7 @@
 # HackSwipe - Tinder for Hackathon Projects
 
-A YouTube Shorts-style app for discovering winning hackathon projects from Devpost. Swipe through 220+ hackathon projects, watch demo videos, and save the ones that inspire you.
+A Tinder-style app for peeking hackathon projects from Devpost. Swipe through 220+ hackathon projects, watch demo videos, and save the ones that inspire you.
+
 
 ## Features
 

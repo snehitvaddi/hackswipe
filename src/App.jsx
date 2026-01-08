@@ -50,6 +50,7 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [viewingProject, setViewingProject] = useState(null) // For viewing a project from history
   const [direction, setDirection] = useState(null)
+  const [swipeCount, setSwipeCount] = useState(0) // Track swipes since last save
 
   // Initialize projects
   const initializeProjects = useCallback(() => {
@@ -84,14 +85,27 @@ function App() {
     setSaving(false)
   }, [user, liked, history, currentIndex, passed])
 
-  // Auto-save when data changes (with debounce)
+  // Save on page unload (beforeunload)
   useEffect(() => {
-    if (!user || loading) return
-    const timeout = setTimeout(() => {
-      saveData()
-    }, 1000) // Debounce saves by 1 second
-    return () => clearTimeout(timeout)
-  }, [liked, history, currentIndex, passed, user, loading, saveData])
+    if (!user) return
+
+    const handleBeforeUnload = () => {
+      // Use sendBeacon for reliable save on page close
+      const data = {
+        user_id: user.id,
+        liked_projects: liked,
+        history: history,
+        current_index: currentIndex,
+        passed_projects: passed,
+        updated_at: new Date().toISOString()
+      }
+      // Synchronous save attempt - saveData is async so we use navigator.sendBeacon
+      navigator.sendBeacon && saveData()
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [user, liked, history, currentIndex, passed, saveData])
 
   // Check for existing session and set up auth listener
   useEffect(() => {
@@ -137,6 +151,14 @@ function App() {
       setLiked(prev => [...prev, currentProject])
     } else {
       setPassed(prev => [...prev, currentProject])
+    }
+
+    // Save every 5 swipes
+    const newSwipeCount = swipeCount + 1
+    setSwipeCount(newSwipeCount)
+    if (user && newSwipeCount >= 5) {
+      setSwipeCount(0)
+      saveData()
     }
 
     setTimeout(() => {

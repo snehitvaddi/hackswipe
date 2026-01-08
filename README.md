@@ -2,6 +2,7 @@
 
 A Tinder-style app for peeking hackathon projects from Devpost. Swipe through 220+ hackathon projects, watch demo videos, and save the ones that inspire you.
 
+<img src="https://github.com/snehitvaddi/hackswipe/blob/main/HackSwipe%20UI.png" height="600" />
 
 ## Features
 
@@ -12,13 +13,7 @@ A Tinder-style app for peeking hackathon projects from Devpost. Swipe through 22
 - **Keyboard Support** - Arrow keys for desktop users
 - **Liked Projects Gallery** - Save and revisit projects you loved
 - **Rich Project Info** - Prizes, tech stack, team members, and links
-
-## Screenshots
-
-| Main View | Project Card | Liked Projects |
-|-----------|--------------|----------------|
-| ![Main](screenshots/main.png) | ![Card](screenshots/card.png) | ![Liked](screenshots/liked.png) |
-
+  
 ## Tech Stack
 
 - **React 19** - UI framework

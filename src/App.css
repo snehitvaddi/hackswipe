@@ -439,12 +439,23 @@ body {
   flex-shrink: 0;
 }
 
+/* Action Buttons (inside card) */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  padding: 12px 0 8px;
+  margin-top: 8px;
+}
+
 .action-btn {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  height: 50px;
+  gap: 4px;
+  width: 70px;
+  height: 70px;
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -452,7 +463,9 @@ body {
 }
 
 .action-btn span {
-  display: none;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 .action-btn.pass {

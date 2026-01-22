@@ -539,6 +539,20 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
             </a>
           )}
         </div>
+
+        {/* Action Buttons - for desktop and as alternative to swipe */}
+        {!isViewOnly && (
+          <div className="action-buttons">
+            <button className="action-btn pass" onClick={() => onSwipe('left')}>
+              <X size={24} />
+              <span>Skip</span>
+            </button>
+            <button className="action-btn like" onClick={() => onSwipe('right')}>
+              <Heart size={24} />
+              <span>Like</span>
+            </button>
+          </div>
+        )}
       </div>
     </motion.div>
   )

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion'
-import { Heart, X, Github, ExternalLink, ChevronLeft, Sparkles, Play, Menu, RotateCcw, User, LogOut, Loader, Gauge } from 'lucide-react'
+import { Heart, X, Github, ExternalLink, ChevronLeft, Sparkles, Play, Menu, RotateCcw, User, LogOut, Loader } from 'lucide-react'
 // Tinder-style: Swipe RIGHT to like, Swipe LEFT to pass
 import './App.css'
 
@@ -375,26 +375,7 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
   const likeOpacity = useTransform(x, [0, 100, 200], [0, 0.5, 1])
   const passOpacity = useTransform(x, [-200, -100, 0], [1, 0.5, 0])
 
-  const iframeRef = useRef(null)
-  const [playbackSpeed, setPlaybackSpeed] = useState(1)
-  const [showSpeedMenu, setShowSpeedMenu] = useState(false)
-
   const youtubeId = getYouTubeId(project.youtube)
-
-  const handleSpeedChange = (speed) => {
-    // Use postMessage to control YouTube iframe speed
-    if (iframeRef.current && iframeRef.current.contentWindow) {
-      iframeRef.current.contentWindow.postMessage(JSON.stringify({
-        event: 'command',
-        func: 'setPlaybackRate',
-        args: [speed]
-      }), '*')
-      setPlaybackSpeed(speed)
-    }
-    setShowSpeedMenu(false)
-  }
-
-  const speeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
 
   const handleDragEnd = (_, info) => {
     if (isViewOnly) return
@@ -438,46 +419,14 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
       {/* Video Section */}
       <div className="video-section">
         {youtubeId ? (
-          <>
-            <iframe
-              ref={iframeRef}
-              src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
-              title={project.title}
-              className="youtube-player"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-            {/* Speed Control Button */}
-            <div className="speed-control">
-              <button
-                className="speed-btn"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowSpeedMenu(!showSpeedMenu)
-                }}
-              >
-                <Gauge size={14} />
-                <span>{playbackSpeed}x</span>
-              </button>
-              {showSpeedMenu && (
-                <div className="speed-menu">
-                  {speeds.map(speed => (
-                    <button
-                      key={speed}
-                      className={`speed-option ${playbackSpeed === speed ? 'active' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleSpeedChange(speed)
-                      }}
-                    >
-                      {speed}x
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
+          <iframe
+            src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1&playsinline=1`}
+            title={project.title}
+            className="youtube-player"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
         ) : (
           <div className="no-video">
             <Play size={48} />
@@ -539,20 +488,6 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
             </a>
           )}
         </div>
-
-        {/* Action Buttons - for desktop and as alternative to swipe */}
-        {!isViewOnly && (
-          <div className="action-buttons">
-            <button className="action-btn pass" onClick={() => onSwipe('left')}>
-              <X size={24} />
-              <span>Skip</span>
-            </button>
-            <button className="action-btn like" onClick={() => onSwipe('right')}>
-              <Heart size={24} />
-              <span>Like</span>
-            </button>
-          </div>
-        )}
       </div>
     </motion.div>
   )

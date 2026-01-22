@@ -5,69 +5,75 @@ const rawData = JSON.parse(fs.readFileSync('../devpost-scraper/devpost_winners_2
 
 // Convert to the format needed by the app
 const projects = rawData.map(p => {
-  // Extract clean summary (short version for card)
-  let summary = '';
+  // Build a comprehensive summary from all available sections
+  // Goal: Give reader full context - what it does, how it was built, why it matters
+  let summaryParts = [];
+
+  // Start with AI summary if available (it's usually a good overview)
   if (p.aiSummary) {
-    // Remove markdown formatting and get first meaningful paragraph
-    const lines = p.aiSummary
-      .split('\n')
-      .filter(l => l.trim() && !l.startsWith('#') && !l.startsWith('*') && !l.startsWith('1.') && !l.startsWith('2.'));
-    summary = lines[0] || '';
+    const cleanSummary = p.aiSummary
+      .replace(/\*\*/g, '')
+      .replace(/IDEA SUMMARY[:\s]*/gi, '')
+      .replace(/TECHNICAL HIGHLIGHTS[:\s]*/gi, '')
+      .replace(/^#+\s*/gm, '')
+      .replace(/^\d+\.\s*/gm, '')
+      .trim();
+    if (cleanSummary) {
+      summaryParts.push(cleanSummary);
+    }
   }
-  if (!summary && p.whatItDoes) {
-    summary = p.whatItDoes.split('\n')[0];
+
+  // Add "What it does" if not already covered
+  if (p.whatItDoes && !summaryParts.some(s => s.includes(p.whatItDoes.substring(0, 50)))) {
+    summaryParts.push(`What it does: ${p.whatItDoes.trim()}`);
   }
+
+  // Add inspiration/problem being solved
+  if (p.inspiration) {
+    summaryParts.push(`Inspiration: ${p.inspiration.trim()}`);
+  }
+
+  // Add how it was built (tech approach)
+  if (p.howWeBuiltIt) {
+    summaryParts.push(`How it was built: ${p.howWeBuiltIt.trim()}`);
+  }
+
+  // Add challenges faced
+  if (p.challenges) {
+    summaryParts.push(`Challenges: ${p.challenges.trim()}`);
+  }
+
+  // Add accomplishments
+  if (p.accomplishments) {
+    summaryParts.push(`Accomplishments: ${p.accomplishments.trim()}`);
+  }
+
+  // Add what they learned
+  if (p.whatWeLearned) {
+    summaryParts.push(`What we learned: ${p.whatWeLearned.trim()}`);
+  }
+
+  // Add future plans
+  if (p.whatsNext) {
+    summaryParts.push(`What's next: ${p.whatsNext.trim()}`);
+  }
+
+  // Combine all parts with line breaks
+  let summary = summaryParts.join('\n\n');
+
+  // Fallback to tagline or description
   if (!summary && p.tagline) {
     summary = p.tagline;
   }
   if (!summary && p.fullDescription) {
-    summary = p.fullDescription.substring(0, 300);
+    summary = p.fullDescription;
   }
 
-  // Clean summary - remove markdown artifacts
+  // Clean up any remaining markdown artifacts
   summary = summary
     .replace(/\*\*/g, '')
-    .replace(/IDEA SUMMARY[:\s]*/gi, '')
-    .replace(/^\d+\.\s*/, '')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
-
-  // Don't limit length - let it be scrollable in the app
-
-  // Build full description with sections
-  let description = '';
-
-  if (p.whatItDoes) {
-    description += `**What it does**\n${p.whatItDoes.trim()}\n\n`;
-  }
-
-  if (p.inspiration) {
-    description += `**Inspiration**\n${p.inspiration.trim()}\n\n`;
-  }
-
-  if (p.howWeBuiltIt) {
-    description += `**How we built it**\n${p.howWeBuiltIt.trim()}\n\n`;
-  }
-
-  if (p.challenges) {
-    description += `**Challenges**\n${p.challenges.trim()}\n\n`;
-  }
-
-  if (p.accomplishments) {
-    description += `**Accomplishments**\n${p.accomplishments.trim()}\n\n`;
-  }
-
-  if (p.whatWeLearned) {
-    description += `**What we learned**\n${p.whatWeLearned.trim()}\n\n`;
-  }
-
-  if (p.whatsNext) {
-    description += `**What's next**\n${p.whatsNext.trim()}\n\n`;
-  }
-
-  // Fallback to fullDescription if no sections
-  if (!description && p.fullDescription) {
-    description = p.fullDescription.trim();
-  }
 
   // Get clean YouTube URL
   let youtube = '';
@@ -96,12 +102,15 @@ const projects = rawData.map(p => {
       .join('; ');
   }
 
+  // Get hackathon name if available
+  const hackathon = p.hackathon || null;
+
   return {
     title: p.title || 'Untitled Project',
     summary: summary || 'No description available.',
-    description: description || null,  // Full description with sections
+    hackathon: hackathon,
     prize: prize || null,
-    techStack: (p.builtWith || []).join(', ') || null,  // Include all tech
+    techStack: (p.builtWith || []).join(', ') || null,
     github: (p.githubLinks || [])[0] || null,
     youtube: youtube || null,
     demo: p.demoUrl || null,

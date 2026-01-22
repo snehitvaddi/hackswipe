@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion'
-import { Heart, X, Github, ExternalLink, ChevronLeft, Sparkles, Play, Menu, RotateCcw, User, LogOut, Loader } from 'lucide-react'
+import { Heart, X, Github, ExternalLink, ChevronLeft, Sparkles, Play, Menu, RotateCcw, User, LogOut, Loader, Gauge } from 'lucide-react'
 // Tinder-style: Swipe RIGHT to like, Swipe LEFT to pass
 import './App.css'
 
@@ -375,6 +375,77 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
   const likeOpacity = useTransform(x, [0, 100, 200], [0, 0.5, 1])
   const passOpacity = useTransform(x, [-200, -100, 0], [1, 0.5, 0])
 
+  const playerRef = useRef(null)
+  const containerRef = useRef(null)
+  const [player, setPlayer] = useState(null)
+  const [playbackSpeed, setPlaybackSpeed] = useState(1)
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false)
+
+  const youtubeId = getYouTubeId(project.youtube)
+  const playerId = `youtube-player-${youtubeId}-${Math.random().toString(36).substr(2, 9)}`
+
+  // Initialize YouTube IFrame API
+  useEffect(() => {
+    if (!youtubeId) return
+
+    // Load YouTube IFrame API if not already loaded
+    if (!window.YT) {
+      const tag = document.createElement('script')
+      tag.src = 'https://www.youtube.com/iframe_api'
+      const firstScriptTag = document.getElementsByTagName('script')[0]
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag)
+    }
+
+    const initPlayer = () => {
+      if (window.YT && window.YT.Player && containerRef.current) {
+        const newPlayer = new window.YT.Player(playerId, {
+          videoId: youtubeId,
+          playerVars: {
+            rel: 0,
+            modestbranding: 1,
+            playsinline: 1,
+          },
+          events: {
+            onReady: (event) => {
+              setPlayer(event.target)
+              playerRef.current = event.target
+            }
+          }
+        })
+      }
+    }
+
+    // Small delay to ensure DOM is ready
+    const timeout = setTimeout(() => {
+      if (window.YT && window.YT.Player) {
+        initPlayer()
+      } else {
+        window.onYouTubeIframeAPIReady = initPlayer
+      }
+    }, 100)
+
+    return () => {
+      clearTimeout(timeout)
+      if (playerRef.current && playerRef.current.destroy) {
+        try {
+          playerRef.current.destroy()
+        } catch (e) {
+          // Ignore destroy errors
+        }
+      }
+    }
+  }, [youtubeId, playerId])
+
+  const handleSpeedChange = (speed) => {
+    if (player && player.setPlaybackRate) {
+      player.setPlaybackRate(speed)
+      setPlaybackSpeed(speed)
+    }
+    setShowSpeedMenu(false)
+  }
+
+  const speeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
+
   const handleDragEnd = (_, info) => {
     if (isViewOnly) return
     // Horizontal swipe like Tinder
@@ -386,8 +457,6 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
   }
 
   const exitX = direction === 'right' ? 500 : direction === 'left' ? -500 : 0
-
-  const youtubeId = getYouTubeId(project.youtube)
 
   return (
     <motion.div
@@ -417,15 +486,40 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
       )}
 
       {/* Video Section */}
-      <div className="video-section">
+      <div className="video-section" ref={containerRef}>
         {youtubeId ? (
-          <iframe
-            src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`}
-            title={project.title}
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+          <>
+            <div id={playerId} className="youtube-player"></div>
+            {/* Speed Control Button */}
+            <div className="speed-control">
+              <button
+                className="speed-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowSpeedMenu(!showSpeedMenu)
+                }}
+              >
+                <Gauge size={14} />
+                <span>{playbackSpeed}x</span>
+              </button>
+              {showSpeedMenu && (
+                <div className="speed-menu">
+                  {speeds.map(speed => (
+                    <button
+                      key={speed}
+                      className={`speed-option ${playbackSpeed === speed ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleSpeedChange(speed)
+                      }}
+                    >
+                      {speed}x
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         ) : (
           <div className="no-video">
             <Play size={48} />

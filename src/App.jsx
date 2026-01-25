@@ -50,7 +50,6 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [viewingProject, setViewingProject] = useState(null) // For viewing a project from history
   const [direction, setDirection] = useState(null)
-  const [swipeCount, setSwipeCount] = useState(0) // Track swipes since last save
 
   // Initialize projects
   const initializeProjects = useCallback(() => {
@@ -154,11 +153,8 @@ function App() {
       setPassed(prev => [...prev, currentProject])
     }
 
-    // Save every 5 swipes for extra reliability
-    const newSwipeCount = swipeCount + 1
-    setSwipeCount(newSwipeCount)
-    if (user && newSwipeCount >= 5) {
-      setSwipeCount(0)
+    // Save immediately after every swipe
+    if (user) {
       saveData()
     }
 

@@ -1,7 +1,59 @@
 const fs = require('fs');
 
-// Read the scraped data
-const rawData = JSON.parse(fs.readFileSync('../devpost-scraper/devpost_winners_2026-01-07.json', 'utf8'));
+// Read the scraped data - use the latest file
+const rawData = JSON.parse(fs.readFileSync('../devpost-scraper/devpost_winners_2026-02-16.json', 'utf8'));
+
+// Keywords to filter out games and VR projects
+const GAME_VR_KEYWORDS = [
+  'game', 'gaming', 'gamer',
+  'vr', 'virtual reality', 'xr', 'mixed reality', 'mr',
+  'unity', 'unreal', 'unreal-engine', 'ue5',
+  'roblox', 'robloxstudio',
+  'quest', 'oculus', 'meta quest',
+  'godot', 'pygame',
+  'metasdk', 'metaspatialsdk', 'metaxr',
+  'spatialsdk',
+  'blender',  // 3D modeling tool commonly used for games
+  'passthrough', 'handtracking',
+  'horizonworlds',
+];
+
+// Title keywords that strongly indicate a game
+const GAME_TITLE_KEYWORDS = [
+  'game', 'quest', 'escape room', 'royale', 'fighter',
+  'attack', 'battle', 'maze', 'sandbox', 'platformer',
+  'puzzle', 'arcade', 'rpg', 'mmorpg', 'shooter',
+  'run', 'runner', 'shift', 'wizards',
+];
+
+function isGameOrVR(project) {
+  const title = (project.title || '').toLowerCase();
+  const techStack = (project.builtWith || []).map(t => t.toLowerCase());
+  const description = (project.tagline || '').toLowerCase();
+  const whatItDoes = (project.whatItDoes || '').toLowerCase();
+
+  // Check tech stack for game/VR technologies
+  for (const tech of techStack) {
+    if (GAME_VR_KEYWORDS.includes(tech)) return true;
+  }
+
+  // Check title for game keywords
+  for (const kw of GAME_TITLE_KEYWORDS) {
+    if (title.includes(kw)) return true;
+  }
+
+  // Check if description explicitly mentions being a game or VR
+  const textToCheck = title + ' ' + description + ' ' + whatItDoes;
+  if (/\b(video game|board game|card game|vr experience|vr app|virtual reality)\b/i.test(textToCheck)) {
+    return true;
+  }
+
+  return false;
+}
+
+// Filter out games and VR projects
+const filteredData = rawData.filter(p => !isGameOrVR(p));
+console.log(`Filtered: ${rawData.length} -> ${filteredData.length} (removed ${rawData.length - filteredData.length} game/VR projects)`);
 
 // Helper to get first 1-2 sentences (crisp summary)
 function getCrispSummary(text, maxLength = 200) {
@@ -32,7 +84,7 @@ function getCrispSummary(text, maxLength = 200) {
 }
 
 // Convert to the format needed by the app
-const projects = rawData.map(p => {
+const projects = filteredData.map(p => {
   // Build sectioned summary with crisp content
   let sections = [];
 
@@ -139,12 +191,21 @@ const projects = rawData.map(p => {
   };
 }).filter(p => p.title && p.summary);
 
-// Save to src/data
-fs.writeFileSync('./src/data/projects.json', JSON.stringify(projects, null, 2));
+// Deduplicate by projectUrl
+const seen = new Set();
+const uniqueProjects = projects.filter(p => {
+  if (!p.projectUrl || seen.has(p.projectUrl)) return false;
+  seen.add(p.projectUrl);
+  return true;
+});
 
-console.log(`Converted ${projects.length} projects for HackSwipe app`);
-console.log('Saved to: src/data/projects.json');
+console.log(`After dedup: ${uniqueProjects.length} unique projects`);
+
+// Save to src/data
+fs.writeFileSync('./src/data/projects.json', JSON.stringify(uniqueProjects, null, 2));
+
+console.log(`\nSaved ${uniqueProjects.length} projects to src/data/projects.json`);
 
 // Show sample
 console.log('\nSample project:');
-console.log(JSON.stringify(projects[0], null, 2));
+console.log(JSON.stringify(uniqueProjects[0], null, 2));

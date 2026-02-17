@@ -156,9 +156,27 @@ body {
   overflow: hidden;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .shorts-card:active {
+  cursor: grabbing;
+}
+
+/* Transparent overlay on video to capture swipe events */
+.video-touch-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  cursor: grab;
+}
+
+.video-touch-overlay:active {
   cursor: grabbing;
 }
 
@@ -198,6 +216,7 @@ body {
   flex-shrink: 0;
   min-height: 200px;
   position: relative;
+  overflow: hidden;
 }
 
 .video-section iframe,

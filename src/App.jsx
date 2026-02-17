@@ -390,20 +390,23 @@ function App() {
 
 function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
   const x = useMotionValue(0)
-  const rotate = useTransform(x, [-200, 0, 200], [-25, 0, 25])
+  const rotate = useTransform(x, [-200, 0, 200], [-15, 0, 15])
 
-  const likeOpacity = useTransform(x, [0, 100, 200], [0, 0.5, 1])
-  const passOpacity = useTransform(x, [-200, -100, 0], [1, 0.5, 0])
+  const likeOpacity = useTransform(x, [0, 50, 150], [0, 0.5, 1])
+  const passOpacity = useTransform(x, [-150, -50, 0], [1, 0.5, 0])
 
   const youtubeId = getYouTubeId(project.youtube)
 
   const handleDragEnd = (_, info) => {
     if (isViewOnly) return
-    // Horizontal swipe like Tinder
-    if (info.offset.x > 100) {
-      onSwipe('right') // Swipe right = like
-    } else if (info.offset.x < -100) {
-      onSwipe('left') // Swipe left = pass
+    const swipeThreshold = 80
+    const velocityThreshold = 500
+
+    // Swipe triggers on distance OR quick flick velocity
+    if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
+      onSwipe('right')
+    } else if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
+      onSwipe('left')
     }
   }
 
@@ -415,10 +418,10 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
       style={isViewOnly ? {} : { x, rotate }}
       drag={isViewOnly ? false : "x"}
       dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.9}
+      dragElastic={0.7}
       onDragEnd={handleDragEnd}
       initial={{ scale: 0.95, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1, x: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
       exit={{ x: exitX, opacity: 0, rotate: exitX > 0 ? 15 : -15, transition: { duration: 0.3 } }}
       whileDrag={{ cursor: 'grabbing' }}
     >
@@ -438,6 +441,8 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
 
       {/* Video Section */}
       <div className="video-section">
+        {/* Touch overlay to prevent iframe from stealing swipe events */}
+        {!isViewOnly && <div className="video-touch-overlay" />}
         {youtubeId ? (
           <iframe
             src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1&playsinline=1`}

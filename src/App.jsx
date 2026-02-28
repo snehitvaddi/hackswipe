@@ -60,14 +60,11 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [viewingProject, setViewingProject] = useState(null) // For viewing a project from history
   const [direction, setDirection] = useState(null)
-  const [dragOffsetX, setDragOffsetX] = useState(0)
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.matchMedia('(min-width: 1024px) and (pointer: fine)').matches
   })
   const swipeInFlightRef = useRef(false)
-  const wheelDeltaRef = useRef(0)
-  const wheelResetTimerRef = useRef(null)
 
   // Desktop-only motion enhancements (trackpad + wider stage)
   useEffect(() => {
@@ -166,7 +163,6 @@ function App() {
 
     swipeInFlightRef.current = true
     setDirection(dir)
-    setDragOffsetX(0)
 
     // Add to history with status
     setHistory(prev => [...prev, { project: currentProject, liked: dir === 'right' }])
@@ -236,39 +232,6 @@ function App() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
-
-  // Desktop trackpad gesture: horizontal two-finger swipe to like/pass.
-  useEffect(() => {
-    if (!isDesktop) return
-
-    const handleWheel = (e) => {
-      if (!currentProject || swipeInFlightRef.current || showLiked || showHistory || viewingProject || showLogin || showResetConfirm) {
-        return
-      }
-
-      const strongHorizontalIntent = Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.2 && Math.abs(e.deltaX) > 8
-      if (!strongHorizontalIntent) return
-
-      e.preventDefault()
-      wheelDeltaRef.current += e.deltaX
-
-      if (Math.abs(wheelDeltaRef.current) >= 110) {
-        handleSwipe(wheelDeltaRef.current > 0 ? 'left' : 'right')
-        wheelDeltaRef.current = 0
-      }
-
-      if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current)
-      wheelResetTimerRef.current = window.setTimeout(() => {
-        wheelDeltaRef.current = 0
-      }, 180)
-    }
-
-    window.addEventListener('wheel', handleWheel, { passive: false })
-    return () => {
-      window.removeEventListener('wheel', handleWheel)
-      if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current)
-    }
-  }, [isDesktop, currentProject, showLiked, showHistory, viewingProject, showLogin, showResetConfirm, handleSwipe])
 
   // Loading state
   if (loading) {
@@ -397,9 +360,6 @@ function App() {
     )
   }
 
-  const passRailStrength = Math.min(Math.max(-dragOffsetX, 0) / 160, 1)
-  const likeRailStrength = Math.min(Math.max(dragOffsetX, 0) / 160, 1)
-
   return (
     <div className={`app shorts-layout ${isDesktop ? 'desktop-app' : ''}`}>
       {/* Top Stats Bar */}
@@ -435,20 +395,11 @@ function App() {
 
       {/* Main Card Area */}
       <div className={`shorts-container ${isDesktop ? 'desktop-mode' : ''}`}>
-        {isDesktop && (
-          <div className={`swipe-rail pass ${direction === 'left' ? 'active' : ''}`} style={{ '--rail-strength': passRailStrength }}>
-            <X size={26} />
-            <span>Pass</span>
-            <small>Swipe left or trackpad right</small>
-          </div>
-        )}
-
         <div className="card-stage">
           <AnimatePresence
             mode="wait"
             onExitComplete={() => {
               setDirection(null)
-              setDragOffsetX(0)
               swipeInFlightRef.current = false
             }}
           >
@@ -457,52 +408,48 @@ function App() {
               project={currentProject}
               onSwipe={handleSwipe}
               direction={direction}
-              onDragOffsetChange={setDragOffsetX}
               isDesktop={isDesktop}
             />
           </AnimatePresence>
         </div>
-
-        {isDesktop && (
-          <div className={`swipe-rail like ${direction === 'right' ? 'active' : ''}`} style={{ '--rail-strength': likeRailStrength }}>
-            <Heart size={26} />
-            <span>Like</span>
-            <small>Swipe right or trackpad left</small>
-          </div>
-        )}
       </div>
 
     </div>
   )
 }
 
-function ShortsCard({ project, onSwipe, direction, isViewOnly = false, onDragOffsetChange, isDesktop = false }) {
+function ShortsCard({ project, onSwipe, direction, isViewOnly = false, isDesktop = false }) {
   const x = useMotionValue(0)
-  const rotate = useTransform(x, [-240, 0, 240], [-10, 0, 10])
+  const y = useTransform(x, [-320, 0, 320], [18, 0, 18])
+  const rotate = useTransform(x, [-320, 0, 320], [-6, 0, 6])
 
   const likeOpacity = useTransform(x, [0, 40, 140], [0, 0.45, 1])
   const passOpacity = useTransform(x, [-140, -40, 0], [1, 0.45, 0])
 
   const youtubeId = getYouTubeId(project.youtube)
 
-  const handleDrag = (_, info) => {
-    if (isViewOnly) return
-    onDragOffsetChange?.(info.offset.x)
-  }
-
   const handleDragEnd = (_, info) => {
     if (isViewOnly) return
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 390
-    const swipeThreshold = Math.min(150, viewportWidth * (isDesktop ? 0.17 : 0.2))
-    const velocityThreshold = isDesktop ? 560 : 480
+    const swipeThreshold = Math.min(isDesktop ? 240 : 150, viewportWidth * (isDesktop ? 0.24 : 0.32))
+    const velocityThreshold = isDesktop ? 920 : 860
+    const flickMinOffset = isDesktop ? 42 : 34
+    const offsetX = info.offset.x
+    const velocityX = info.velocity.x
+    const directionFromOffset = Math.sign(offsetX)
+    const directionFromVelocity = Math.sign(velocityX)
+    const isLargeDistance = Math.abs(offsetX) > swipeThreshold
+    const isStrongFlick = Math.abs(velocityX) > velocityThreshold &&
+      Math.abs(offsetX) > flickMinOffset &&
+      directionFromOffset === directionFromVelocity
 
-    // Swipe triggers on distance OR quick flick velocity
-    if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
+    if (directionFromOffset > 0 && (isLargeDistance || isStrongFlick)) {
       onSwipe('right')
-    } else if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
+      return
+    }
+
+    if (directionFromOffset < 0 && (isLargeDistance || isStrongFlick)) {
       onSwipe('left')
-    } else {
-      onDragOffsetChange?.(0)
     }
   }
 
@@ -511,18 +458,17 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false, onDragOff
   return (
     <Motion.div
       className="shorts-card"
-      style={isViewOnly ? {} : { x, rotate }}
+      style={isViewOnly ? {} : { x, y, rotate }}
       drag={isViewOnly ? false : "x"}
-      dragElastic={isDesktop ? 0.14 : 0.2}
+      dragElastic={isDesktop ? 0.05 : 0.08}
       dragMomentum={false}
       dragSnapToOrigin={!isViewOnly}
-      dragTransition={{ bounceStiffness: 700, bounceDamping: 30, power: 0.35, timeConstant: 180 }}
-      onDrag={handleDrag}
+      dragTransition={{ bounceStiffness: 760, bounceDamping: 34, power: 0.22, timeConstant: 170 }}
       onDragEnd={handleDragEnd}
       initial={{ scale: 0.97, opacity: 0, y: 16 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
       exit={{ x: exitX, opacity: 0, rotate: exitX > 0 ? 14 : -14, transition: { duration: 0.28, ease: 'easeOut' } }}
-      whileDrag={{ cursor: 'grabbing', scale: 1.01, boxShadow: '0 24px 50px rgba(0, 0, 0, 0.22)' }}
+      whileDrag={{ cursor: 'grabbing', scale: 1.01, boxShadow: '0 20px 44px rgba(0, 0, 0, 0.2)' }}
     >
       {/* Swipe Indicators - only show when not view only */}
       {!isViewOnly && (

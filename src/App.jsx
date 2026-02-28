@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { motion as Motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion'
 import { Heart, X, Github, ExternalLink, ChevronLeft, Sparkles, Play, Menu, RotateCcw, User, LogOut, Loader } from 'lucide-react'
 // Tinder-style: Swipe RIGHT to like, Swipe LEFT to pass
 import './App.css'
@@ -35,8 +35,16 @@ function getYouTubeId(url) {
 // Fixed seed for consistent ordering
 const SHUFFLE_SEED = 42
 
+function initializeProjectsList() {
+  const withVideo = projectsData.filter(p => getYouTubeId(p.youtube))
+  const withoutVideo = projectsData.filter(p => !getYouTubeId(p.youtube))
+  const shuffledWithVideo = shuffleWithSeed(withVideo, SHUFFLE_SEED)
+  const shuffledWithoutVideo = shuffleWithSeed(withoutVideo, SHUFFLE_SEED + 1000)
+  return [...shuffledWithVideo, ...shuffledWithoutVideo]
+}
+
 function App() {
-  const [projects, setProjects] = useState([])
+  const [projects, setProjects] = useState(() => initializeProjectsList())
   const [currentIndex, setCurrentIndex] = useState(0)
   const [liked, setLiked] = useState([])
   const [passed, setPassed] = useState([])
@@ -50,14 +58,28 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [viewingProject, setViewingProject] = useState(null) // For viewing a project from history
   const [direction, setDirection] = useState(null)
+  const [dragOffsetX, setDragOffsetX] = useState(0)
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(min-width: 1024px) and (pointer: fine)').matches
+  })
+  const swipeInFlightRef = useRef(false)
+  const wheelDeltaRef = useRef(0)
+  const wheelResetTimerRef = useRef(null)
 
-  // Initialize projects
-  const initializeProjects = useCallback(() => {
-    const withVideo = projectsData.filter(p => getYouTubeId(p.youtube))
-    const withoutVideo = projectsData.filter(p => !getYouTubeId(p.youtube))
-    const shuffledWithVideo = shuffleWithSeed(withVideo, SHUFFLE_SEED)
-    const shuffledWithoutVideo = shuffleWithSeed(withoutVideo, SHUFFLE_SEED + 1000)
-    return [...shuffledWithVideo, ...shuffledWithoutVideo]
+  // Desktop-only motion enhancements (trackpad + wider stage)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mediaQuery = window.matchMedia('(min-width: 1024px) and (pointer: fine)')
+    const updateDesktop = (event) => setIsDesktop(event.matches)
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', updateDesktop)
+      return () => mediaQuery.removeEventListener('change', updateDesktop)
+    }
+
+    mediaQuery.addListener(updateDesktop)
+    return () => mediaQuery.removeListener(updateDesktop)
   }, [])
 
   // Load user data from Supabase
@@ -109,8 +131,6 @@ function App() {
 
   // Check for existing session and set up auth listener
   useEffect(() => {
-    setProjects(initializeProjects())
-
     // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
@@ -135,14 +155,16 @@ function App() {
     })
 
     return () => subscription.unsubscribe()
-  }, [initializeProjects, loadData])
+  }, [loadData])
 
   const currentProject = projects[currentIndex]
 
-  const handleSwipe = (dir) => {
-    if (!currentProject) return
+  const handleSwipe = useCallback((dir) => {
+    if (!currentProject || swipeInFlightRef.current) return
 
+    swipeInFlightRef.current = true
     setDirection(dir)
+    setDragOffsetX(0)
 
     // Add to history with status
     setHistory(prev => [...prev, { project: currentProject, liked: dir === 'right' }])
@@ -158,18 +180,16 @@ function App() {
       saveData()
     }
 
-    setTimeout(() => {
-      setCurrentIndex(prev => prev + 1)
-      setDirection(null)
-    }, 300)
-  }
+    // Move deck immediately so AnimatePresence can run a true fly-out exit
+    setCurrentIndex(prev => prev + 1)
+  }, [currentProject, user, saveData])
 
   const handleReset = async () => {
     setCurrentIndex(0)
     setLiked([])
     setPassed([])
     setHistory([])
-    setProjects(initializeProjects())
+    setProjects(initializeProjectsList())
     setShowResetConfirm(false)
 
     // Clear data in Supabase if logged in
@@ -202,15 +222,51 @@ function App() {
     setUser(null)
   }
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = useCallback((e) => {
+    if (!currentProject || swipeInFlightRef.current || showLiked || showHistory || viewingProject || showLogin || showResetConfirm) {
+      return
+    }
     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') handleSwipe('right')
     if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') handleSwipe('left')
-  }
+  }, [currentProject, showLiked, showHistory, viewingProject, showLogin, showResetConfirm, handleSwipe])
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [currentProject])
+  }, [handleKeyDown])
+
+  // Desktop trackpad gesture: horizontal two-finger swipe to like/pass.
+  useEffect(() => {
+    if (!isDesktop) return
+
+    const handleWheel = (e) => {
+      if (!currentProject || swipeInFlightRef.current || showLiked || showHistory || viewingProject || showLogin || showResetConfirm) {
+        return
+      }
+
+      const strongHorizontalIntent = Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.2 && Math.abs(e.deltaX) > 8
+      if (!strongHorizontalIntent) return
+
+      e.preventDefault()
+      wheelDeltaRef.current += e.deltaX
+
+      if (Math.abs(wheelDeltaRef.current) >= 110) {
+        handleSwipe(wheelDeltaRef.current > 0 ? 'left' : 'right')
+        wheelDeltaRef.current = 0
+      }
+
+      if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current)
+      wheelResetTimerRef.current = window.setTimeout(() => {
+        wheelDeltaRef.current = 0
+      }, 180)
+    }
+
+    window.addEventListener('wheel', handleWheel, { passive: false })
+    return () => {
+      window.removeEventListener('wheel', handleWheel)
+      if (wheelResetTimerRef.current) clearTimeout(wheelResetTimerRef.current)
+    }
+  }, [isDesktop, currentProject, showLiked, showHistory, viewingProject, showLogin, showResetConfirm, handleSwipe])
 
   // Loading state
   if (loading) {
@@ -339,8 +395,11 @@ function App() {
     )
   }
 
+  const passRailStrength = Math.min(Math.max(-dragOffsetX, 0) / 160, 1)
+  const likeRailStrength = Math.min(Math.max(dragOffsetX, 0) / 160, 1)
+
   return (
-    <div className="app shorts-layout">
+    <div className={`app shorts-layout ${isDesktop ? 'desktop-app' : ''}`}>
       {/* Top Stats Bar */}
       <header className="top-bar">
         <button className="icon-btn" onClick={() => setShowHistory(true)} title="History">
@@ -373,69 +432,107 @@ function App() {
       </header>
 
       {/* Main Card Area */}
-      <div className="shorts-container">
-        <AnimatePresence mode="wait">
-          <ShortsCard
-            key={currentIndex}
-            project={currentProject}
-            onSwipe={handleSwipe}
-            direction={direction}
-          />
-        </AnimatePresence>
+      <div className={`shorts-container ${isDesktop ? 'desktop-mode' : ''}`}>
+        {isDesktop && (
+          <div className={`swipe-rail pass ${direction === 'left' ? 'active' : ''}`} style={{ '--rail-strength': passRailStrength }}>
+            <X size={26} />
+            <span>Pass</span>
+            <small>Swipe left or trackpad right</small>
+          </div>
+        )}
+
+        <div className="card-stage">
+          <AnimatePresence
+            mode="wait"
+            onExitComplete={() => {
+              setDirection(null)
+              setDragOffsetX(0)
+              swipeInFlightRef.current = false
+            }}
+          >
+            <ShortsCard
+              key={currentIndex}
+              project={currentProject}
+              onSwipe={handleSwipe}
+              direction={direction}
+              onDragOffsetChange={setDragOffsetX}
+              isDesktop={isDesktop}
+            />
+          </AnimatePresence>
+        </div>
+
+        {isDesktop && (
+          <div className={`swipe-rail like ${direction === 'right' ? 'active' : ''}`} style={{ '--rail-strength': likeRailStrength }}>
+            <Heart size={26} />
+            <span>Like</span>
+            <small>Swipe right or trackpad left</small>
+          </div>
+        )}
       </div>
 
     </div>
   )
 }
 
-function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
+function ShortsCard({ project, onSwipe, direction, isViewOnly = false, onDragOffsetChange, isDesktop = false }) {
   const x = useMotionValue(0)
-  const rotate = useTransform(x, [-200, 0, 200], [-15, 0, 15])
+  const rotate = useTransform(x, [-240, 0, 240], [-10, 0, 10])
 
-  const likeOpacity = useTransform(x, [0, 50, 150], [0, 0.5, 1])
-  const passOpacity = useTransform(x, [-150, -50, 0], [1, 0.5, 0])
+  const likeOpacity = useTransform(x, [0, 40, 140], [0, 0.45, 1])
+  const passOpacity = useTransform(x, [-140, -40, 0], [1, 0.45, 0])
 
   const youtubeId = getYouTubeId(project.youtube)
 
+  const handleDrag = (_, info) => {
+    if (isViewOnly) return
+    onDragOffsetChange?.(info.offset.x)
+  }
+
   const handleDragEnd = (_, info) => {
     if (isViewOnly) return
-    const swipeThreshold = 80
-    const velocityThreshold = 500
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 390
+    const swipeThreshold = Math.min(150, viewportWidth * (isDesktop ? 0.17 : 0.2))
+    const velocityThreshold = isDesktop ? 560 : 480
 
     // Swipe triggers on distance OR quick flick velocity
     if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
       onSwipe('right')
     } else if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
       onSwipe('left')
+    } else {
+      onDragOffsetChange?.(0)
     }
   }
 
-  const exitX = direction === 'right' ? 500 : direction === 'left' ? -500 : 0
+  const exitX = direction === 'right' ? 900 : direction === 'left' ? -900 : 0
 
   return (
-    <motion.div
+    <Motion.div
       className="shorts-card"
       style={isViewOnly ? {} : { x, rotate }}
       drag={isViewOnly ? false : "x"}
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.7}
+      dragElastic={isDesktop ? 0.14 : 0.2}
+      dragMomentum={false}
+      dragSnapToOrigin={!isViewOnly}
+      dragTransition={{ bounceStiffness: 700, bounceDamping: 30, power: 0.35, timeConstant: 180 }}
+      onDrag={handleDrag}
       onDragEnd={handleDragEnd}
-      initial={{ scale: 0.95, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{ x: exitX, opacity: 0, rotate: exitX > 0 ? 15 : -15, transition: { duration: 0.3 } }}
-      whileDrag={{ cursor: 'grabbing' }}
+      initial={{ scale: 0.97, opacity: 0, y: 16 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      exit={{ x: exitX, opacity: 0, rotate: exitX > 0 ? 14 : -14, transition: { duration: 0.28, ease: 'easeOut' } }}
+      whileDrag={{ cursor: 'grabbing', scale: 1.01, boxShadow: '0 24px 50px rgba(0, 0, 0, 0.22)' }}
     >
       {/* Swipe Indicators - only show when not view only */}
       {!isViewOnly && (
         <>
-          <motion.div className="swipe-overlay like-overlay" style={{ opacity: likeOpacity }}>
+          <Motion.div className="swipe-overlay like-overlay" style={{ opacity: likeOpacity }}>
             <Heart size={64} />
             <span>LIKE</span>
-          </motion.div>
-          <motion.div className="swipe-overlay pass-overlay" style={{ opacity: passOpacity }}>
+          </Motion.div>
+          <Motion.div className="swipe-overlay pass-overlay" style={{ opacity: passOpacity }}>
             <X size={64} />
             <span>SKIP</span>
-          </motion.div>
+          </Motion.div>
         </>
       )}
 
@@ -514,7 +611,7 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
           )}
         </div>
       </div>
-    </motion.div>
+    </Motion.div>
   )
 }
 

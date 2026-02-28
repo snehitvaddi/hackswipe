@@ -58,6 +58,7 @@ function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [dataLoaded, setDataLoaded] = useState(false) // Prevents auto-save from overwriting data before load completes
   const [viewingProject, setViewingProject] = useState(null) // For viewing a project from history
   const [direction, setDirection] = useState(null)
   const [isDesktop, setIsDesktop] = useState(() => {
@@ -90,11 +91,15 @@ function App() {
       setCurrentIndex(data.current_index || 0)
       setPassed(data.passed_projects || [])
     }
+    // Only allow saving AFTER a successful load — prevents overwriting data with empty defaults
+    if (!error) {
+      setDataLoaded(true)
+    }
   }, [])
 
   // Save user data to Supabase (debounced)
   const saveData = useCallback(async () => {
-    if (!user) return
+    if (!user || !dataLoaded) return // CRITICAL: never save before data has loaded
     setSaving(true)
     await saveUserData(user.id, {
       likedProjects: liked,
@@ -104,11 +109,11 @@ function App() {
       userEmail: user.email
     })
     setSaving(false)
-  }, [user, liked, history, currentIndex, passed])
+  }, [user, liked, history, currentIndex, passed, dataLoaded])
 
   // Auto-save when data changes (with debounce)
   useEffect(() => {
-    if (!user || loading) return
+    if (!user || loading || !dataLoaded) return
     const timeout = setTimeout(() => {
       saveData()
     }, 1000) // Debounce saves by 1 second
@@ -146,6 +151,7 @@ function App() {
         loadData(session.user.id)
       } else {
         // Reset to defaults when logged out
+        setDataLoaded(false)
         setLiked([])
         setHistory([])
         setCurrentIndex(0)

@@ -16,6 +16,7 @@ const GAME_VR_KEYWORDS = [
   'blender',  // 3D modeling tool commonly used for games
   'passthrough', 'handtracking',
   'horizonworlds',
+  'webxr', 'iwsdk',  // WebXR and Immersal Web SDK
 ];
 
 // Title keywords that strongly indicate a game
@@ -44,7 +45,7 @@ function isGameOrVR(project) {
 
   // Check if description explicitly mentions being a game or VR
   const textToCheck = title + ' ' + description + ' ' + whatItDoes;
-  if (/\b(video game|board game|card game|vr experience|vr app|virtual reality)\b/i.test(textToCheck)) {
+  if (/\b(video game|board game|card game|vr experience|vr app|virtual reality|vr|xr)\b/i.test(textToCheck)) {
     return true;
   }
 

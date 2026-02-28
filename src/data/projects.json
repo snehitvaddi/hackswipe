@@ -390,19 +390,6 @@
     "projectUrl": "https://devpost.com/software/aegis-ai-8q3aph"
   },
   {
-    "title": "Fluxglove and VR",
-    "summary": "📋 Overview\n### 1. IDEA SUMMARY Fluxglove and VR is an innovative project that integrates a gesture-controlled glove with virtual reality experiences.\n\n🎯 What it does\nFluxGlove is a low-cost, haptic-enabled smart glove that translates natural hand movements into digital actions in real-time.\n\n💡 Inspiration\nThe inspiration for FluxGlove (born from our initiative Sparsh Mukthi) came from two starkly different realities.\n\n🔧 How it was built\nWe adopted a hybrid hardware-software approach, leveraging our background in Electronics & Communication Engineering (ECE).\n\n⚡ Challenges\nThe \"Jitter\" Problem: The raw values from the flex sensors and MPU6050 were incredibly noisy. The cursor would shake uncontrollably.\n\n🏆 Accomplishments\nThe Price Point: We successfully built a functional prototype for under $50, whereas industry standards cost hundreds or thousands.\n\n📚 What we learned\nSensor Fusion: We gained a deep understanding of how to mathematically combine data from different sensors to create a reliable \"truth.\n\n🚀 What's next\nWireless Evolution: Migrating from Arduino Uno to ESP32 to introduce Bluetooth Low Energy (BLE) and remove the cables entirely.",
-    "hackathon": null,
-    "prize": null,
-    "techStack": "arduino, css, flex, html5, javascript, mpu6050, python",
-    "github": "https://github.com/anuragkr-14/FLUXGLOVES",
-    "youtube": "https://www.youtube.com/watch?v=AncF9D27v9A",
-    "demo": "https://fluxglove.vercel.app/",
-    "team": "Keshav Agrawal, Saket Kumar, Anshul Kumar, Anurag Kumar, Mohak Gupta",
-    "date": "2025-12-08",
-    "projectUrl": "https://devpost.com/software/fluxglove-and-vr"
-  },
-  {
     "title": "Hardy World Poker",
     "summary": "📋 Overview\n### 1. IDEA SUMMARY Hardy World Poker is a digital poker platform designed to enhance the gaming experience through innovative technology and engaging features.\n\n🎯 What it does\nHardy World Poker is a complete Texas Hold'em poker game featuring: Multi-tiered Buy-In System: Players can choose from 6 different cities with varying buy-in amounts (1K, 5K, 10K, 25K, 50K, 100K), ea...\n\n💡 Inspiration\nHardy World Poker was inspired by the desire to create an immersive, multiplayer poker experience within Horizon Worlds.\n\n🔧 How it was built\nThe project was built using: TypeScript: Core game logic, state management, and AI decision-making NoesisGUI/XAML: UI framework for creating responsive, data-bound interfaces Horizon Worlds API: Netwo...\n\n🏆 Accomplishments\nComplete Poker Implementation: Successfully built a full-featured Texas Hold'em game with all standard rules and edge cases handled Performance Optimizations: Achieved significant performance improvem...\n\n📚 What we learned\nPerformance Matters: Pre-computation and caching can dramatically improve performance in computationally intensive operations like hand evaluation Type Safety is Critical: Careful type validation prev...\n\n🚀 What's next\nTournament Mode: Implement tournament-style gameplay with multiple tables and progressive elimination Player Customization: Allow players to customize their table themes, and card designs Achievement...",
     "hackathon": null,
@@ -427,19 +414,6 @@
     "team": null,
     "date": "2025-12-08",
     "projectUrl": "https://devpost.com/software/boopi"
-  },
-  {
-    "title": "MarketView VR",
-    "summary": "📋 Overview\n### MarketView VR Project Summary 1. IDEA SUMMARY: MarketView VR is an innovative Android application designed to provide users with immersive virtual reality experiences for market analysis and visualization.\n\n🎯 What it does\nMarketView VR is a VR‑native stock analysis workspace for Meta Horizon OS.\n\n💡 Inspiration\nStock analysis has always been a multi‑screen activity: serious investors juggle charts, news, and multiple tickers at once, but are constrained by flat monitors and limited screen space.\n\n🔧 How it was built\nStarted with Figma Make for initial mockups, refined in Figma for detail. Connected to Meta Horizon MCP server to incorporate all VR design recommendations.\n\n⚡ Challenges\nThe challenge we ran into was designing specifically for VR, which we found very important and thus spent a lot of time on.\n\n🏆 Accomplishments\nThe result is a minimal yet capable P0 app that feels “native” to VR rather than a flat app ported into 3D.\n\n📚 What we learned\nDesigning for VR forced a rethinking of common finance UI patterns: typography, spacing, and hierarchy all need to be more generous, and interactions must work equally well with hands and controllers.\n\n🚀 What's next\nThe next planned release will add portfolio filters (such as top movers and worst performers) and additional chart types, including candlestick, bar, and comparison views.",
-    "hackathon": null,
-    "prize": "Winner Best Android Utility App",
-    "techStack": "android, android-studio, compose, kotlin, mcp",
-    "github": null,
-    "youtube": "https://www.youtube.com/watch?v=XFBR9wV8kLA",
-    "demo": null,
-    "team": null,
-    "date": "2025-12-09",
-    "projectUrl": "https://devpost.com/software/marketview-vr"
   },
   {
     "title": "AptX",
@@ -505,45 +479,6 @@
     "team": null,
     "date": "2025-12-06",
     "projectUrl": "https://devpost.com/software/ai-code-mentor-ghpdf7"
-  },
-  {
-    "title": "HandCraft XR: Winter Edition",
-    "summary": "📋 Overview\n### HandCraft XR: Winter Edition 1. IDEA SUMMARY: HandCraft XR: Winter Edition is an immersive experience designed to engage users in a virtual crafting environment during the winter season.\n\n🎯 What it does\nHandCraft XR is a calm Mixed Reality sandbox where you use natural hand gestures to build a festive miniature Christmas Market on a virtual table.\n\n💡 Inspiration\nI love programming, VR, and building things. Naturally, I wondered: why not create a little thematic playground - something like virtual LEGO?\n\n🔧 How it was built\nThe experience is built specifically for Meta Quest devices using Immersive Web SDK, Three.js, WebXR, and a fully hand-tracked interaction system.\n\n⚡ Challenges\nPerformance in WebXR: Standard materials and shadows were too heavy, so lighting had to be redesigned around lighter, more stable options.\n\n🏆 Accomplishments\nA fully hand-tracked building system that feels natural and intuitive A single-pass outline effect implemented via the stencil buffer Efficient shadows using an adaptive, on-demand shadow system with...\n\n📚 What we learned\nHow to structure a WebXR project using ECS architecture How stencil buffers work How to identify CPU or GPU bottlenecks, and distinguish vertex-bound from fragment-bound performance issues How to buil...\n\n🚀 What's next\nFuture improvements I'm excited about: WebRTC-based multiplayer building with friends Sharing worlds or exporting creations Night mode with warm lights and glowing decorations People and animated elem...",
-    "hackathon": null,
-    "prize": "Winner Judge’s Choice",
-    "techStack": "havok, iwsdk, three.js, typescript, webxr",
-    "github": "https://github.com/evstinik/immersive-web-sdk",
-    "youtube": "https://www.youtube.com/watch?v=4KbKIA9H5_Y",
-    "demo": "https://handcraft-xr.netlify.app/",
-    "team": "Nikita Evstigneev",
-    "date": "2025-12-07",
-    "projectUrl": "https://devpost.com/software/handcraft-xr-winter-edition"
-  },
-  {
-    "title": "Staxel",
-    "summary": "📋 Overview\n### Staxel Hackathon Project Summary 1. IDEA SUMMARY: Staxel is a project that leverages innovative technology to enhance user experiences in a digital environment, likely focusing on interactive or immersive elements.\n\n⚡ Challenges\nWithout prior XR development experience, the main challenge was selecting the right development stack.\n\n📚 What we learned\nI learned how to develop a WebXR application for Meta Quest using Immersive Web SDK, became a pro in debugging XR applications, and tried a new vibe-coding IDE (Antigravity).",
-    "hackathon": null,
-    "prize": "Winner Best Upgrade to an Existing Project by Meta Runner-Up",
-    "techStack": "iwsdk, openai, python, webxr",
-    "github": null,
-    "youtube": "https://www.youtube.com/watch?v=sPFpocr_aMk",
-    "demo": "https://sensaihack.staxel.ai/",
-    "team": null,
-    "date": "2025-12-05",
-    "projectUrl": "https://devpost.com/software/staxel"
-  },
-  {
-    "title": "GeoPortal",
-    "summary": "📋 Overview\n### 1. IDEA SUMMARY GeoPortal is an innovative application designed to enhance user engagement through location-based services, integrating aviation data and immersive experiences.\n\n🎯 What it does\nThe app transforms in-flight travel into an interactive exploration. At its core, it is a real-time flight monitor that visualizes the journey on a dynamic map.\n\n💡 Inspiration\nI conceived this idea on a flight to Rome. Frustrated by the lack of entertainment systems and the inability to know our location, I saw an opportunity to solve the boredom of air travel.\n\n🔧 How it was built\nI built the app using native Android technologies (Kotlin and Jetpack Compose). I engineered a custom data pipeline to cross-reference AviationStack API telemetry with local geospatial data.\n\n⚡ Challenges\nMy biggest problem was time. I only saw the competition 4 days before the deadline and wanted to do something even if it is not completed.\n\n🏆 Accomplishments\nI am proud of being able to build such useful application in just 4 day. Furthermore, establishing a stable peer-to-peer Bluetooth handshake in an offline environment was a major win.\n\n📚 What we learned\nI learned that with the right mathematical optimization, Jetpack Compose’s Canvas API is capable of high-performance complex visualizations without needing OpenGL.\n\n🚀 What's next\nI plan to evolve the app into a comprehensive social platform.",
-    "hackathon": null,
-    "prize": "Winner Best Android App Leveraging Features Unique to Meta Quest",
-    "techStack": "aviationstackapi, bluetooth, canvasapi, exoplayer, jetpackcompose, kotlin",
-    "github": null,
-    "youtube": "https://www.youtube.com/watch?v=diRcGpDhMl8",
-    "demo": null,
-    "team": "Merve Yuvaci",
-    "date": "2025-12-09",
-    "projectUrl": "https://devpost.com/software/geoportal"
   },
   {
     "title": "EcoSage",
@@ -635,19 +570,6 @@
     "team": "Praveen Kumar Patel",
     "date": "2025-12-01",
     "projectUrl": "https://devpost.com/software/safe2go"
-  },
-  {
-    "title": "ModStorm Block Party",
-    "summary": "📋 Overview\n### ModStorm Block Party Project Summary 1. IDEA SUMMARY: ModStorm Block Party is an interactive virtual gathering platform that leverages web technologies to create immersive social experiences.",
-    "hackathon": null,
-    "prize": "Winner Judge’s Choice",
-    "techStack": "amazon-web-services, javascript, node.js, three.js, webrtc, websockets, webxr",
-    "github": null,
-    "youtube": "https://www.youtube.com/watch?v=qsvlQcJF09A",
-    "demo": null,
-    "team": "Kory Fluckiger",
-    "date": "2025-12-09",
-    "projectUrl": "https://devpost.com/software/party-blast"
   },
   {
     "title": "Sprint Focus",

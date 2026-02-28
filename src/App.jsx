@@ -29,7 +29,9 @@ function shuffleWithSeed(array, seed) {
 function getYouTubeId(url) {
   if (!url) return null
   const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?#]+)/)
-  return match ? match[1] : null
+  const id = match ? match[1] : null
+  if (!id || id === 'VIDEO_ID' || id.length < 8) return null
+  return id
 }
 
 // Fixed seed for consistent ordering
@@ -538,8 +540,13 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false, onDragOff
 
       {/* Video Section */}
       <div className="video-section">
-        {/* Touch overlay to prevent iframe from stealing swipe events */}
-        {!isViewOnly && <div className="video-touch-overlay" />}
+        {/* Keep center area tappable for video playback; use side zones for swipe capture */}
+        {!isViewOnly && (
+          <>
+            <div className="video-swipe-zone left" />
+            <div className="video-swipe-zone right" />
+          </>
+        )}
         {youtubeId ? (
           <iframe
             src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1&playsinline=1`}

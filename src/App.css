@@ -177,18 +177,26 @@ body {
   cursor: grabbing;
 }
 
-/* Transparent overlay on video to capture swipe events */
-.video-touch-overlay {
+/* Side swipe capture zones so center remains clickable for video controls */
+.video-swipe-zone {
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
   bottom: 0;
   z-index: 5;
   cursor: grab;
+  width: 19%;
+  min-width: 56px;
 }
 
-.video-touch-overlay:active {
+.video-swipe-zone.left {
+  left: 0;
+}
+
+.video-swipe-zone.right {
+  right: 0;
+}
+
+.video-swipe-zone:active {
   cursor: grabbing;
 }
 

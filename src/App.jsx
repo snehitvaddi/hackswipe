@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { motion as Motion, useMotionValue, useTransform, AnimatePresence, useDragControls } from 'framer-motion'
+import { motion as Motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion'
 import { Heart, X, Github, ExternalLink, ChevronLeft, Sparkles, Play, Menu, RotateCcw, User, LogOut, Loader } from 'lucide-react'
 // Tinder-style: Swipe RIGHT to like, Swipe LEFT to pass
 import './App.css'
@@ -408,7 +408,6 @@ function App() {
               project={currentProject}
               onSwipe={handleSwipe}
               direction={direction}
-              isDesktop={isDesktop}
             />
           </AnimatePresence>
         </div>
@@ -418,64 +417,48 @@ function App() {
   )
 }
 
-function ShortsCard({ project, onSwipe, direction, isViewOnly = false, isDesktop = false }) {
-  const dragControls = useDragControls()
+function ShortsCard({ project, onSwipe, direction, isViewOnly = false }) {
   const x = useMotionValue(0)
-  const rotate = useTransform(x, [-260, 0, 260], [-4, 0, 4])
+  const rotate = useTransform(x, [-300, 0, 300], [-15, 0, 15])
 
-  const likeOpacity = useTransform(x, [0, 40, 140], [0, 0.45, 1])
-  const passOpacity = useTransform(x, [-140, -40, 0], [1, 0.45, 0])
+  const likeOpacity = useTransform(x, [0, 30, 100], [0, 0.4, 1])
+  const passOpacity = useTransform(x, [-100, -30, 0], [1, 0.4, 0])
 
   const youtubeId = getYouTubeId(project.youtube)
 
-  const startDrag = (event) => {
-    if (isViewOnly) return
-    dragControls.start(event)
-  }
-
   const handleDragEnd = (_, info) => {
     if (isViewOnly) return
-    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 390
-    const swipeThreshold = Math.min(isDesktop ? 240 : 150, viewportWidth * (isDesktop ? 0.24 : 0.32))
-    const velocityThreshold = isDesktop ? 920 : 860
-    const flickMinOffset = isDesktop ? 42 : 34
     const offsetX = info.offset.x
     const velocityX = info.velocity.x
-    const directionFromOffset = Math.sign(offsetX)
-    const directionFromVelocity = Math.sign(velocityX)
-    const isLargeDistance = Math.abs(offsetX) > swipeThreshold
-    const isStrongFlick = Math.abs(velocityX) > velocityThreshold &&
-      Math.abs(offsetX) > flickMinOffset &&
-      directionFromOffset === directionFromVelocity
 
-    if (directionFromOffset > 0 && (isLargeDistance || isStrongFlick)) {
+    // Tinder-style: low threshold for easy swiping + flick detection
+    const isSwipeRight = offsetX > 80 || (velocityX > 400 && offsetX > 20)
+    const isSwipeLeft = offsetX < -80 || (velocityX < -400 && offsetX < -20)
+
+    if (isSwipeRight) {
       onSwipe('right')
-      return
-    }
-
-    if (directionFromOffset < 0 && (isLargeDistance || isStrongFlick)) {
+    } else if (isSwipeLeft) {
       onSwipe('left')
     }
   }
 
-  const exitX = direction === 'right' ? 900 : direction === 'left' ? -900 : 0
+  const exitX = direction === 'right' ? 600 : direction === 'left' ? -600 : 0
 
   return (
     <Motion.div
       className="shorts-card"
       style={isViewOnly ? {} : { x, rotate }}
       drag={isViewOnly ? false : "x"}
-      dragControls={dragControls}
-      dragListener={false}
-      dragElastic={isDesktop ? 0.05 : 0.08}
+      dragDirectionLock
+      dragElastic={0.18}
       dragMomentum={false}
       dragSnapToOrigin={!isViewOnly}
-      dragTransition={{ bounceStiffness: 760, bounceDamping: 34, power: 0.22, timeConstant: 170 }}
+      dragTransition={{ bounceStiffness: 500, bounceDamping: 25 }}
       onDragEnd={handleDragEnd}
       initial={{ scale: 0.97, opacity: 0, y: 16 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
-      exit={{ x: exitX, opacity: 0, rotate: exitX > 0 ? 14 : -14, transition: { duration: 0.28, ease: 'easeOut' } }}
-      whileDrag={{ cursor: 'grabbing', scale: 1.006, boxShadow: '0 20px 44px rgba(0, 0, 0, 0.2)' }}
+      exit={{ x: exitX, opacity: 0, rotate: exitX > 0 ? 15 : -15, transition: { duration: 0.3, ease: 'easeOut' } }}
+      whileDrag={{ cursor: 'grabbing', scale: 1.02 }}
     >
       {/* Swipe Indicators - only show when not view only */}
       {!isViewOnly && (
@@ -494,12 +477,7 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false, isDesktop
       {/* Video Section */}
       <div className="video-section">
         {/* Keep center area tappable for video playback; use side zones for swipe capture */}
-        {!isViewOnly && (
-          <>
-            <div className="video-swipe-zone left" onPointerDown={startDrag} />
-            <div className="video-swipe-zone right" onPointerDown={startDrag} />
-          </>
-        )}
+        {!isViewOnly && <div className="iframe-touch-overlay" />}
         {youtubeId ? (
           <iframe
             src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1&playsinline=1`}
@@ -518,7 +496,7 @@ function ShortsCard({ project, onSwipe, direction, isViewOnly = false, isDesktop
       </div>
 
       {/* Content Section */}
-      <div className="content-section" onPointerDownCapture={(e) => e.stopPropagation()}>
+      <div className="content-section">
         {/* Prize Badge */}
         {project.prize && (
           <div className="prize-row">

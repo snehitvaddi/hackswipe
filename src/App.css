@@ -163,7 +163,7 @@ body {
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   touch-action: pan-y;
-  transform-origin: center center;
+  transform-origin: 50% 90%;
   will-change: transform;
   -webkit-user-select: none;
   user-select: none;
@@ -173,27 +173,27 @@ body {
   cursor: grabbing;
 }
 
-/* Side swipe capture zones so center remains clickable for video controls */
-.video-swipe-zone {
+/* Touch overlay on iframe to prevent it from stealing swipe events */
+.iframe-touch-overlay {
   position: absolute;
   top: 0;
+  left: 0;
+  right: 0;
   bottom: 0;
   z-index: 5;
+  touch-action: pan-y;
   cursor: grab;
-  width: 19%;
-  min-width: 56px;
 }
 
-.video-swipe-zone.left {
-  left: 0;
-}
-
-.video-swipe-zone.right {
-  right: 0;
-}
-
-.video-swipe-zone:active {
+.iframe-touch-overlay:active {
   cursor: grabbing;
+}
+
+/* On desktop with mouse, let clicks through to iframe for video controls */
+@media (pointer: fine) {
+  .iframe-touch-overlay {
+    pointer-events: none;
+  }
 }
 
 /* Swipe Overlays */

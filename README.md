@@ -1,6 +1,6 @@
 # HackSwipe - Tinder for Hackathon Projects
 
-### [Live Demo](https://hackswipe.vercel.app)
+# [APP](https://hackswipe.vercel.app)
 
 A Tinder-style app for peeking hackathon projects from Devpost. Swipe through 220+ hackathon projects, watch demo videos, and save the ones that inspire you.
 

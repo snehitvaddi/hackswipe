@@ -1,7 +1,14 @@
 const fs = require('fs');
 
 // Read the scraped data - use the latest file
-const rawData = JSON.parse(fs.readFileSync('../devpost-scraper/devpost_winners_2026-02-16.json', 'utf8'));
+// Auto-pick the most recent scraper dump
+const scraperDir = '../devpost-scraper';
+const latestDump = fs.readdirSync(scraperDir)
+  .filter(f => /^devpost_winners_\d{4}-\d{2}-\d{2}\.json$/.test(f))
+  .sort()
+  .pop();
+console.log(`Reading ${latestDump}`);
+const rawData = JSON.parse(fs.readFileSync(`${scraperDir}/${latestDump}`, 'utf8'));
 
 // Keywords to filter out games and VR projects
 const GAME_VR_KEYWORDS = [

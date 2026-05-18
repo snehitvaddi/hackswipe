@@ -10,19 +10,34 @@ import projectsData from './data/projects.json'
 // Supabase
 import { supabase, signInWithGoogle, signOut, saveUserData, loadUserData } from './lib/supabase'
 
-// Seeded random number generator for consistent shuffling
-function seededRandom(seed) {
-  const x = Math.sin(seed++) * 10000
-  return x - Math.floor(x)
+// mulberry32: small, fast, well-distributed seeded PRNG
+function mulberry32(seed) {
+  let a = seed >>> 0
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
 }
 
-function shuffleWithSeed(array, seed) {
-  const shuffled = [...array]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(seededRandom(seed + i) * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+// Hash a string to a 32-bit int (FNV-1a)
+function hashString(str) {
+  let h = 0x811c9dc5
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
   }
-  return shuffled
+  return h >>> 0
+}
+
+function shuffleInPlace(array, rng) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[array[i], array[j]] = [array[j], array[i]]
+  }
+  return array
 }
 
 // Helper to extract YouTube video ID
@@ -34,19 +49,71 @@ function getYouTubeId(url) {
   return id
 }
 
-// Fixed seed for consistent ordering
-const SHUFFLE_SEED = 42
+// Six months in ms — anything posted before this is excluded from the active feed
+const SIX_MONTHS_MS = 1000 * 60 * 60 * 24 * 30 * 6
+const GUEST_SEED_KEY = 'hackswipe_guest_seed_v1'
 
-function initializeProjectsList() {
-  const withVideo = projectsData.filter(p => getYouTubeId(p.youtube))
-  const withoutVideo = projectsData.filter(p => !getYouTubeId(p.youtube))
-  const shuffledWithVideo = shuffleWithSeed(withVideo, SHUFFLE_SEED)
-  const shuffledWithoutVideo = shuffleWithSeed(withoutVideo, SHUFFLE_SEED + 1000)
-  return [...shuffledWithVideo, ...shuffledWithoutVideo]
+function getGuestSeed() {
+  if (typeof window === 'undefined') return Math.floor(Math.random() * 0xFFFFFFFF)
+  let s = window.localStorage.getItem(GUEST_SEED_KEY)
+  if (!s) {
+    s = String(Math.floor(Math.random() * 0xFFFFFFFF))
+    window.localStorage.setItem(GUEST_SEED_KEY, s)
+  }
+  return parseInt(s, 10) >>> 0
+}
+
+// Group projects into weekly buckets (newest week first), shuffle within each bucket
+// using a per-user seed. Within a bucket, projects with videos appear before those without.
+function initializeProjectsList(userId) {
+  const seed = userId ? hashString(userId) : getGuestSeed()
+  const now = Date.now()
+  const cutoff = now - SIX_MONTHS_MS
+
+  const recent = []
+  const undated = []
+  for (const p of projectsData) {
+    const t = p.date ? Date.parse(p.date) : NaN
+    if (Number.isFinite(t)) {
+      if (t >= cutoff) recent.push({ p, t })
+    } else {
+      undated.push(p)
+    }
+  }
+
+  // Bucket by ISO week (7-day window since epoch); newest bucket first
+  const buckets = new Map()
+  for (const { p, t } of recent) {
+    const week = Math.floor(t / (1000 * 60 * 60 * 24 * 7))
+    if (!buckets.has(week)) buckets.set(week, [])
+    buckets.get(week).push(p)
+  }
+  const weeksDesc = [...buckets.keys()].sort((a, b) => b - a)
+
+  const ordered = []
+  weeksDesc.forEach((week, idx) => {
+    // Vary the per-bucket sub-seed so neighbouring weeks don't share the same RNG sequence
+    const rng = mulberry32(seed ^ (week * 0x9E3779B1) ^ (idx * 0x85EBCA6B))
+    const bucket = buckets.get(week)
+    const withVideo = bucket.filter(p => getYouTubeId(p.youtube))
+    const withoutVideo = bucket.filter(p => !getYouTubeId(p.youtube))
+    shuffleInPlace(withVideo, rng)
+    shuffleInPlace(withoutVideo, rng)
+    ordered.push(...withVideo, ...withoutVideo)
+  })
+
+  // Undated projects (rare) trail at the end, also shuffled
+  if (undated.length) {
+    const rng = mulberry32(seed ^ 0xDEADBEEF)
+    shuffleInPlace(undated, rng)
+    ordered.push(...undated)
+  }
+
+  return ordered
 }
 
 function App() {
-  const [projects, setProjects] = useState(() => initializeProjectsList())
+  const [projects, setProjects] = useState(() => initializeProjectsList(null))
   const [currentIndex, setCurrentIndex] = useState(0)
   const [liked, setLiked] = useState([])
   const [passed, setPassed] = useState([])
@@ -139,6 +206,7 @@ function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       if (session?.user) {
+        setProjects(initializeProjectsList(session.user.id))
         loadData(session.user.id)
       }
       setLoading(false)
@@ -148,6 +216,7 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
+        setProjects(initializeProjectsList(session.user.id))
         loadData(session.user.id)
       } else {
         // Reset to defaults when logged out
@@ -156,6 +225,7 @@ function App() {
         setHistory([])
         setCurrentIndex(0)
         setPassed([])
+        setProjects(initializeProjectsList(null))
       }
     })
 
@@ -193,7 +263,7 @@ function App() {
     setLiked([])
     setPassed([])
     setHistory([])
-    setProjects(initializeProjectsList())
+    setProjects(initializeProjectsList(user?.id ?? null))
     setShowResetConfirm(false)
 
     // Clear data in Supabase if logged in
